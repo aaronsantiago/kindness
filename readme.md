@@ -1,0 +1,1 @@
+based on https://github.com/tushuhei/simple-firebase-chat
