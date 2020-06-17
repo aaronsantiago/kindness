@@ -43,7 +43,7 @@
 
 <body>
   <p>Hello world</p>
-  <input type="text" placeholder="say something" class="post-field">
+  <input id="chatBox" type="text" placeholder="say something" class="post-field">
   <button class="submit-button">Submit</button>
   <ul class="message-list"></ul>
   <script>
@@ -64,6 +64,21 @@
       const postFieldElement = document.querySelector('.post-field');
       const submitButtonElement = document.querySelector('.submit-button');
       const db = firebase.firestore();
+
+      let submitMessage = (e) => {
+        db.collection('messages').add({
+          name: 'unknown',
+          text: postFieldElement.value,
+          profilePicUrl: 'https://via.placeholder.com/120',
+          timestamp: Date.now(),
+        });
+        postFieldElement.value = '';
+      };
+      document.getElementById('chatBox').onkeydown = function(e){
+        if(e.keyCode == 13){
+          submitMessage();
+        }
+      };
       db.collection('messages').orderBy('timestamp', 'desc').onSnapshot((snapshot) => {
         messageListElement.innerHTML = '';
         snapshot.forEach((doc) => {
@@ -92,15 +107,7 @@
         });
       });
 
-      submitButtonElement.addEventListener('click', (e) => {
-        db.collection('messages').add({
-          name: 'unknown',
-          text: postFieldElement.value,
-          profilePicUrl: 'https://via.placeholder.com/120',
-          timestamp: Date.now(),
-        });
-        postFieldElement.value = '';
-      })
+      submitButtonElement.addEventListener('click', )
     });
   </script>
 </body>
