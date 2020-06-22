@@ -5,15 +5,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script src="https://www.gstatic.com/firebasejs/7.14.5/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/7.14.5/firebase-firestore.js"></script>
+<script src="mqtt.min.js"></script>
   <style>
       body {
-          background: #eee;
+          background: #222;
           font-family: sans-serif;
+          color: #DDD;
       }
+      input, button {
+        background: #333;
+        color: #DDD;
+        border: none;
+        font-size: 2em;
+      }
+
+      button {
+        background: #444;
+        border-radius: .2em;
+        font-size: 1.5em;
+      }
+
       .message {
-          background: #fff;
+          background: #444;
           list-style: none;
           margin: 10px 0;
           overflow: hidden;
@@ -23,14 +36,6 @@
       }
       .message-list {
           padding-left: 0;
-      }
-      .message__pic {
-          width: 60px;
-          height: 60px;
-          object-fit: cover;
-          object-position: top;
-          float: left;
-          margin-right: 5px;
       }
       .message__name {
           font-weight: bold;
@@ -42,74 +47,105 @@
 </head>
 
 <body>
-  <p>Hello world</p>
-  <input id="chatBox" type="text" placeholder="say something" class="post-field">
-  <button class="submit-button">Submit</button>
+  <p>What group would you like to send kindness to?</p>
+  <input id="sendToGroup" type="text" placeholder="everyone" class="post-field" autocomplete="off">
+  <button class="submit-button">send kindness!</button>
+  <p>What groups would you like to be a part of? (separate with spaces)</p>
+  <input id="myGroups" type="text" placeholder="everyone" class="post-field">
   <ul class="message-list"></ul>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
 
-      let firebaseConfig = {
-        apiKey: "AIzaSyDtBQGdddJegr0uuhtOHYXYUyiWEW_yFvo",
-        authDomain: "the-well-6142e.firebaseapp.com",
-        databaseURL: "https://the-well-6142e.firebaseio.com",
-        projectId: "the-well-6142e",
-        storageBucket: "the-well-6142e.appspot.com",
-        messagingSenderId: "1046538699623",
-        appId: "1:1046538699623:web:57720e208b5f8bf471a5c2"
-      };
-      firebase.initializeApp(firebaseConfig);
+<script>
+let client = mqtt.connect('mqtt://kind-one:8e0e6b8813973531@broker.shiftr.io', {
+  clientId: 'javascript'
+});
 
-      const messageListElement = document.querySelector('.message-list');
-      const postFieldElement = document.querySelector('.post-field');
-      const submitButtonElement = document.querySelector('.submit-button');
-      const db = firebase.firestore();
+// Connect to the shiftr server
+client.on('connect', function(){
+  console.log('client has connected!');
 
-      let submitMessage = (e) => {
-        db.collection('messages').add({
-          name: 'unknown',
-          text: postFieldElement.value,
-          profilePicUrl: 'https://via.placeholder.com/120',
-          timestamp: Date.now(),
-        });
-        postFieldElement.value = '';
-      };
-      document.getElementById('chatBox').onkeydown = function(e){
-        if(e.keyCode == 13){
-          submitMessage();
-        }
-      };
-      db.collection('messages').orderBy('timestamp', 'desc').onSnapshot((snapshot) => {
-        messageListElement.innerHTML = '';
-        snapshot.forEach((doc) => {
-        console.log("did this happen?");
-        console.log(doc);
-          const data = doc.data();
-          const messageElement = document.createElement('li');
-          messageElement.className = 'message';
+  // Setup our group subscription system
 
-          const profileImageElement = document.createElement('img');
-          profileImageElement.src = data.profilePicUrl;
-          profileImageElement.className = 'message__pic';
-          messageElement.appendChild(profileImageElement);
+  const groupListElement = document.querySelector('#myGroups');
+    
+  // keep track of the groups we are subscribed to so
+  // we can unsubscribe when the list is updated
+  let subscribedGroups = [];
+  let resubscribeGroups = function() {
+    // check for any subscribed groups and unsubscribe before
+    // subscribing to any groups
+    for (let group of subscribedGroups) {
+      client.unsubscribe('/kindness/itpcamp/' + group);
+    }
+    console.log("resubscribing");
 
-          const nameElement = document.createElement('span');
-          nameElement.textContent = data.name;
-          nameElement.className = 'message__name';
-          messageElement.appendChild(nameElement);
+    // get the list of groups from the element on the page.
+    // default to "everyone"
+    let groupListString = groupListElement.value || "everyone";
 
-          const textElement = document.createElement('p');
-          textElement.textContent = data.text;
-          textElement.className = 'message__text';
-          messageElement.appendChild(textElement);
+    // split on spaces, gets us a list of groups.
+    // also overwrites the previous list of subscribed groups.
+    subscribedGroups = groupListString.split(" ");
+    // subscribe to the groups!
+    for (let group of subscribedGroups) {
+      console.log(group);
+      client.subscribe('/kindness/itpcamp/' + group);
+    }
+  }
 
-          messageListElement.appendChild(messageElement);
-        });
-      });
+  // subscribe to whatever groups you already had in the text box
+  resubscribeGroups();
 
-      submitButtonElement.addEventListener('click', )
-    });
-  </script>
+  // resubscribe to groups anytime the list changes
+  groupListElement.addEventListener("input", resubscribeGroups);
+
+});
+
+// Get the sending-related elements from the DOM
+const groupToSendToElement = document.querySelector('#sendToGroup');
+const sendButtonElement = document.querySelector('.submit-button');
+
+// Send kindness to the group you chose when you click the submit
+// button or when you press the enter key.
+let submitMessage = (e) => {
+  // get the group from the element on the page.
+  // default to "everyone"
+  let groupListString = groupToSendToElement.value || "everyone";
+  
+  console.log("sending message 'hi' to: " + groupListString);
+  client.publish('/kindness/itpcamp/' + groupListString, "hi");
+};
+groupToSendToElement.onkeydown = function(e){
+  if(e.keyCode == 13){
+    submitMessage();
+  }
+};
+
+
+const messageListElement = document.querySelector('.message-list');
+client.on('message', function(topic, message) {
+  console.log('new message:', topic, message.toString());
+
+  //create the message element and add it to the DOM
+  const messageElement = document.createElement('li');
+  messageElement.className = 'message';
+
+  const nameElement = document.createElement('span');
+  nameElement.textContent = topic;
+  nameElement.className = 'message__name';
+  messageElement.appendChild(nameElement);
+
+  const textElement = document.createElement('p');
+  textElement.textContent = message;
+  textElement.className = 'message__text';
+  messageElement.appendChild(textElement);
+
+  messageListElement.appendChild(messageElement);
+});
+
+sendButtonElement.addEventListener('click', submitMessage)
+</script>
+
+
 </body>
 </html>
 
