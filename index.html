@@ -47,11 +47,11 @@
 </head>
 
 <body>
-  <p>What group would you like to send kindness to?</p>
-  <input id="sendToGroup" type="text" placeholder="everyone" class="post-field" autocomplete="off">
+  <p>Who would you like to send kindness to?</p>
+  <input id="sendToGroup" type="text" placeholder="anyone" class="post-field" autocomplete="off">
   <button class="submit-button">send kindness!</button>
-  <p>What groups would you like to be a part of? (separate with spaces)</p>
-  <input id="myGroups" type="text" placeholder="everyone" class="post-field">
+  <p>How would you like people to reach you?</p>
+  <input id="myGroups" type="text" placeholder="anyone" class="post-field">
   <ul class="message-list"></ul>
 
 <script>
@@ -69,27 +69,37 @@ client.on('connect', function(){
     
   // keep track of the groups we are subscribed to so
   // we can unsubscribe when the list is updated
-  let subscribedGroups = [];
+  // let subscribedGroups = [];
+  let subscribedGroup = "";
   let resubscribeGroups = function() {
-    // check for any subscribed groups and unsubscribe before
-    // subscribing to any groups
-    for (let group of subscribedGroups) {
-      client.unsubscribe('/kindness/itpcamp/' + group);
-    }
     console.log("resubscribing");
 
-    // get the list of groups from the element on the page.
-    // default to "everyone"
-    let groupListString = groupListElement.value || "everyone";
+    client.unsubscribe(subscribedGroup);
 
-    // split on spaces, gets us a list of groups.
-    // also overwrites the previous list of subscribed groups.
-    subscribedGroups = groupListString.split(" ");
-    // subscribe to the groups!
-    for (let group of subscribedGroups) {
-      console.log(group);
-      client.subscribe('/kindness/itpcamp/' + group);
-    }
+    // Disable multiple groups for now as it can be confusing UX
+
+    // // check for any subscribed groups and unsubscribe before
+    // // subscribing to any groups
+    // for (let group of subscribedGroups) {
+    //   client.unsubscribe(group);
+    // }
+    // // get the list of groups from the element on the page.
+    // // default to "everyone"
+    // let groupListString = groupListElement.value || "everyone";
+
+    // // split on spaces, gets us a list of groups.
+    // // also overwrites the previous list of subscribed groups.
+    // subscribedGroups = groupListString.split(" ");
+
+    // // subscribe to the groups!
+    // for (let group of subscribedGroups) {
+    //   console.log(group);
+    //   client.subscribe(group);
+    // }
+
+    subscribedGroup = groupListElement.value || "anyone";
+    console.log(subscribedGroup);
+    client.subscribe(subscribedGroup);
   }
 
   // subscribe to whatever groups you already had in the text box
@@ -108,11 +118,11 @@ const sendButtonElement = document.querySelector('.submit-button');
 // button or when you press the enter key.
 let submitMessage = (e) => {
   // get the group from the element on the page.
-  // default to "everyone"
-  let groupListString = groupToSendToElement.value || "everyone";
+  // default to "anyone"
+  let groupListString = groupToSendToElement.value || "anyone";
   
   console.log("sending message 'hi' to: " + groupListString);
-  client.publish('/kindness/itpcamp/' + groupListString, "hi");
+  client.publish(groupListString, "hi");
 };
 groupToSendToElement.onkeydown = function(e){
   if(e.keyCode == 13){
@@ -124,6 +134,12 @@ groupToSendToElement.onkeydown = function(e){
 const messageListElement = document.querySelector('.message-list');
 client.on('message', function(topic, message) {
   console.log('new message:', topic, message.toString());
+  AddMessage(topic, message.toString());
+});
+
+sendButtonElement.addEventListener('click', submitMessage)
+
+function AddMessage(topic, message) {
 
   //create the message element and add it to the DOM
   const messageElement = document.createElement('li');
@@ -139,10 +155,8 @@ client.on('message', function(topic, message) {
   textElement.className = 'message__text';
   messageElement.appendChild(textElement);
 
-  messageListElement.appendChild(messageElement);
-});
-
-sendButtonElement.addEventListener('click', submitMessage)
+  messageListElement.insertBefore(messageElement, messageListElement.firstChild);
+}
 </script>
 
 
