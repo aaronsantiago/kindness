@@ -5,6 +5,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.0.0/animate.min.css"
+  />
 <script src="randomColor.js"></script>
 <script src="mqtt.min.js"></script>
   <style>
@@ -38,6 +42,10 @@
         text-transform: lowercase;
         position: relative;
 
+        text-shadow: -1px 1px 0 #000,
+                      1px 1px 0 #000,
+                      1px -1px 0 #000;
+                     -1px -1px 0 #000;
       }
       .message-list {
           padding-left: 0;
@@ -253,7 +261,7 @@ function AddMessage(topic, message) {
 
   //create the message element and add it to the DOM
   const messageElement = document.createElement('li');
-  messageElement.className = 'message';
+  messageElement.className = 'message animate__animated animate__fadeInDown';
   messageElement.style["background-color"] = // Returns a dark RGB color with random alpha
     randomColor({
        luminosity: 'dark'
